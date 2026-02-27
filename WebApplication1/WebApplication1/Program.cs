@@ -1,5 +1,6 @@
 using CommonInitializer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 
 namespace WebApplication1
 {
@@ -17,7 +18,7 @@ namespace WebApplication1
             builder.Services.AddControllers();
 
 
-            builder.Services.AddIdentityCore<User>(opt =>
+            builder.Services.AddIdentityCore<MyUser>(opt =>
             {
                 opt.Password.RequireDigit = false;
                 opt.Password.RequireLowercase = false;
@@ -30,7 +31,11 @@ namespace WebApplication1
                 opt.Tokens.EmailConfirmationTokenProvider = TokenOptions.DefaultEmailProvider;
 
             });
-
+            builder.Services.Configure<MvcOptions>((opt) =>
+            {
+                // 这里可以添加全局过滤器等
+                opt.Filters.Add<JWTVersionCheckFilter>();
+            });)
 
             var app = builder.Build();
 
