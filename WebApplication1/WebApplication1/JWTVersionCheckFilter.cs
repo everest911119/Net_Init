@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using JWT;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -16,6 +17,7 @@ namespace WebApplication1
         }
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
+            var req = context.HttpContext.RequestServices.GetRequiredService<ITokenService>();
             var controllerActionDescriptor = context.ActionDescriptor as ControllerActionDescriptor;
 
             if (controllerActionDescriptor == null) return;

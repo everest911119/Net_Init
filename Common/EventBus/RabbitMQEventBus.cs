@@ -24,7 +24,7 @@ namespace EventBus
         private readonly IServiceScope serviceScope;
         private readonly SubscriptionsManager _subManager;
 
-        public RabbitMQEventBus(RabbitMQConnection persistentConnection,IServiceScopeFactory serviceFactory,string exchangeName,
+        public RabbitMQEventBus(RabbitMQConnection persistentConnection, IServiceScopeFactory serviceFactory, string exchangeName,
             string queueName)
         {
             this._queueName = queueName;
@@ -75,8 +75,13 @@ namespace EventBus
             }
             var channel = _connection.CreateModel();
             channel.ExchangeDeclare(exchange: _exchangeName, type: "direct");
-            channel.QueueDeclare(queue:_queueName, durable: true, exclusive:true,autoDelete:false,
-                arguments:null);
+            var arguments = new Dictionary<string, object>
+{
+    { "x-max-length", 10 }, // Limit to 10 messages
+    { "x-overflow", "reject-publish" } // Reject new publishes if the limit is reached
+};
+            channel.QueueDeclare(queue: _queueName, durable: true, exclusive: true, autoDelete: false,
+                arguments: null);
             channel.CallbackException += (sender, ex) =>
             {
                 Debug.Fail(ex.ToString());
@@ -122,19 +127,20 @@ namespace EventBus
                 if (eventData == null)
                 {
                     body = new byte[0];
-                }else
+                }
+                else
                 {
                     JsonSerializerOptions options = new JsonSerializerOptions()
                     {
                         WriteIndented = true,
                     };
-                    body = JsonSerializer.SerializeToUtf8Bytes(eventData,eventData.GetType(),options);
+                    body = JsonSerializer.SerializeToUtf8Bytes(eventData, eventData.GetType(), options);
 
                 }
                 var properties = channel.CreateBasicProperties();
                 properties.DeliveryMode = 2;
                 properties.Persistent = true;
-                
+
                 channel.BasicPublish(
                     exchange: this._exchangeName,
                     routingKey: eventName,
@@ -162,7 +168,7 @@ namespace EventBus
             }
         }
 
-        
+
 
         // 接受信息
         private async Task Consumer_Received(object sender, BasicDeliverEventArgs args)
@@ -175,7 +181,7 @@ namespace EventBus
                 //如果在获取消息时采用不自动应答，但是获取消息后不调用basicAck，
                 //RabbitMQ会认为消息没有投递成功，不仅所有的消息都会保留到内存中，
                 //而且在客户重新连接后，会将消息重新投递一遍。这种情况无法完全避免，因此EventHandler的代码需要幂等
-                _consumerChannel.BasicAck(args.DeliveryTag,multiple: false);
+                _consumerChannel.BasicAck(args.DeliveryTag, multiple: false);
                 //multiple：批量确认标志。如果值为true，则执行批量确认，
                 //此deliveryTag之前收到的消息全部进行确认;
                 //如果值为false，则只对当前收到的消息进行确认
@@ -190,7 +196,7 @@ namespace EventBus
 
         // 处理message
 
-        private async Task ProcessEvent(string eventName,string message)
+        private async Task ProcessEvent(string eventName, string message)
         {
             if (_subManager.HasSsubScritpiontForEvent(eventName))
             {
@@ -235,10 +241,10 @@ namespace EventBus
             DoInternalSubscription(eventName);
             _subManager.AddSubscription(eventName, handlerType);
             StartBasicConsume();
-            
+
         }
 
-        public void Unsubscribe(string eventName,Type handlerType)
+        public void Unsubscribe(string eventName, Type handlerType)
         {
             CheckHandlerType(handlerType);
             _subManager.RemoveSubscription(eventName, handlerType);

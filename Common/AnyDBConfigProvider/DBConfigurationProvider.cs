@@ -19,7 +19,7 @@ namespace AnyDBConfigProvider
         public DBConfigurationProvider(DBConfigOptions options)
         {
             _options = options;
-            TimeSpan interval = TimeSpan.FromSeconds(3);
+            TimeSpan interval = options.ReloadInterval?? TimeSpan.FromSeconds(30);
             if (options.ReloadInterval != null)
             {
                 interval = options.ReloadInterval.Value;

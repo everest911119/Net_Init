@@ -1,7 +1,7 @@
 using CommonInitializer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-
+using Microsoft.AspNetCore.RateLimiting;
 namespace WebApplication1
 {
     public class Program
@@ -35,7 +35,19 @@ namespace WebApplication1
             {
                 // 这里可以添加全局过滤器等
                 opt.Filters.Add<JWTVersionCheckFilter>();
-            });)
+            });
+            builder.Services.AddRateLimiter(rateLimiterOptions =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+                rateLimiterOptions.AddTokenBucketLimiter("token", options =>
+                {
+                    options.TokenLimit = 1000;
+                    options.ReplenishmentPeriod = TimeSpan.FromHours(1);
+                    options.TokensPerPeriod = 700;
+                    options.AutoReplenishment = true;
+                });
+            });
 
             var app = builder.Build();
 
